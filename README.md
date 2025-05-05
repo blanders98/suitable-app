@@ -12,6 +12,7 @@ Suitable is a streamlined geospatial analysis tool that helps users identify opt
 
 - **Interactive Map Interface**: Continuous map display throughout the analysis process
 - **Flexible Data Handling**: Upload boundary datasets and criteria in common formats (GeoJSON, Shapefile)
+  - Currently the application only accepts vector data. 
 - **Multiple Analysis Methods**: Choose between weighted sum and boolean approaches
 - **Customizable Criteria**: Define and weight various spatial factors
 - **Dynamic Visualization**: Real-time preview of datasets with intelligent styling
@@ -79,7 +80,7 @@ Suitable/
 
 ### 3. Define Criteria
 - Add analysis criteria by either:
-  - Uploading new datasets
+  - Uploading new datasets (GeoJSON or zipped Shapefile)
   - Using previously loaded datasets
 - Configure each criterion with:
   - Processing method (direct value, count features, distance, etc.)
