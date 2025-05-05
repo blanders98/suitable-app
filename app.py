@@ -51,6 +51,21 @@ if 'dataset_upload_processed' not in st.session_state:
     st.session_state.dataset_upload_processed = {}
 if 'used_colors' not in st.session_state:
     st.session_state.used_colors = []
+if 'last_clicked' not in st.session_state:
+    st.session_state.last_clicked = {}
+# Key addition for tab state tracking
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = 0  # Default to first tab
+if 'zoom_to_boundary_requested' not in st.session_state:
+    st.session_state.zoom_to_boundary_requested = False
+
+# Function to track UI interactions
+def track_click(widget_id):
+    st.session_state.last_clicked = widget_id
+
+# Function to handle tab changes
+def handle_tab_change(tab_index):
+    st.session_state.active_tab = tab_index
 
 # App title and description
 st.title("Suitable - The Suitability Analysis Tool")
@@ -72,13 +87,15 @@ with map_col:
     with button_col1:
         if st.button("Refresh Map", key="refresh_map_btn"):
             st.session_state.force_map_refresh = True
-            st.rerun()
+            st.rerun()  # Using rerun for better state preservation
     
     # Add zoom to boundary button in second column 
     with button_col2:
-        if 'boundary_bounds' in st.session_state and st.button("🏠 Zoom to Boundary", key="zoom_boundary_btn"):
+        zoom_boundary = st.button("🏠 Zoom to Boundary", key="zoom_boundary_btn")
+        if 'boundary_bounds' in st.session_state and zoom_boundary:
             st.session_state.force_map_refresh = True
-            st.rerun()
+            st.session_state.zoom_to_boundary_requested = True
+            st.rerun()  # Using rerun for better state preservation
     
     # If the map was just refreshed, inform the user
     if force_refresh:
@@ -138,8 +155,11 @@ with controls_col:
                     if st.button("Update Map with Boundary"):
                         # Reset the has_fitted_bounds flag to ensure zooming occurs
                         st.session_state.has_fitted_bounds = False 
+                        # Set active tab to Boundary (index 1)
+                        st.session_state.active_tab = 1
                         st.write("Updating map...")
-                        # The rerun happens implicitly when the button is clicked
+                        # Use rerun for better state preservation
+                        st.rerun()
         elif boundary_file is None:
             # Reset the tracking when file is cleared
             st.session_state.last_boundary_file = None
@@ -265,9 +285,12 @@ with controls_col:
                                     # Try to display on map
                                     add_map_layer(gdf, unique_dataset_name)
                                     
+                                    # Set active tab to ensure we stay on criteria tab
+                                    st.session_state.active_tab = 2
+                                    
                                     # Force UI refresh
                                     st.success(f"Dataset loaded: {dataset_name}")
-                                    st.rerun()
+                                    st.rerun()  # Using rerun for better state preservation
                                 
                             except Exception as e:
                                 st.error(f"Error loading dataset: {str(e)}")
@@ -289,12 +312,14 @@ with controls_col:
                     'Percent Coverage',
                 ]
                 
-                # Add key to force re-render
+                # Add key to force re-render with tracking for tab state preservation
                 st.session_state.processing_method = st.selectbox(
                     "Processing Method", 
                     processing_methods,
                     index=processing_methods.index(st.session_state.processing_method),
-                    key="processing_method_selector"
+                    key="processing_method_selector",
+                    on_change=track_click,
+                    args=("processing_method_selector",)
                 )
                 
                 # Determine if column selection is needed
@@ -331,37 +356,48 @@ with controls_col:
                     index=preferences.index(st.session_state.preference)
                 )
             
-            # Add button (outside the columns)
-            if st.button("Add Criterion"):
+            # Add button (outside the columns) with key fix for state preservation
+            if st.button("Add Criterion", key="add_criterion_btn"):
+                # Set active tab to Criteria (index 2) to ensure we stay on this tab after rerun
+                st.session_state.active_tab = 2
+                
                 # Only proceed if data source is valid
                 if st.session_state.data_source and st.session_state.data_source != "+ Upload New Dataset":
-                    # Create criterion
-                    criterion = Criterion(
-                        id=f"criterion_{st.session_state.criteria_count}",
-                        name=st.session_state.criterion_name,
-                        data_source=st.session_state.data_source,
-                        processing_method=st.session_state.processing_method,
-                        column=st.session_state.column if st.session_state.column != "None/NA" else "",
-                        weight=st.session_state.weight,
-                        preference=st.session_state.preference
-                    )
-                    
-                    # Add to project
-                    st.session_state.project.add_criterion(criterion)
-                    
-                    # Increment counter
-                    st.session_state.criteria_count += 1
-                    
-                    # Reset all form fields to default values
-                    st.session_state.criterion_name = f"Criterion {st.session_state.criteria_count + 1}"
-                    st.session_state.data_source = "+ Upload New Dataset"  # Reset data source to upload new
-                    st.session_state.processing_method = 'Direct Value'  # Reset to default processing method
-                    st.session_state.column = "None/NA"  # Reset column selection
-                    st.session_state.weight = 0.5  # Reset weight to default
-                    st.session_state.preference = 'Higher is better'  # Reset preference to default
-                    
-                    st.success(f"Added criterion: {criterion.name}")
-                    st.rerun()
+                    try:
+                        # Create criterion
+                        criterion = Criterion(
+                            id=f"criterion_{st.session_state.criteria_count}",
+                            name=st.session_state.criterion_name,
+                            data_source=st.session_state.data_source,
+                            processing_method=st.session_state.processing_method,
+                            column=st.session_state.column if st.session_state.column != "None/NA" else "",
+                            weight=st.session_state.weight,
+                            preference=st.session_state.preference
+                        )
+                        
+                        # Add to project
+                        st.session_state.project.add_criterion(criterion)
+                        
+                        # Increment counter
+                        st.session_state.criteria_count += 1
+                        
+                        # Store added criterion name for success message
+                        added_name = criterion.name
+                        
+                        # Reset name field but keep the same data source for convenience
+                        st.session_state.criterion_name = f"Criterion {st.session_state.criteria_count + 1}"
+                        # st.session_state.data_source remains unchanged
+                        
+                        # Force stay on criteria tab before rerun
+                        st.session_state.active_tab = 2
+                        
+                        # Success message
+                        st.success(f"Added criterion: {added_name}")
+                        
+                        # Use rerun which is more reliable for state preservation
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error adding criterion: {str(e)}")
                 else:
                     st.error("Please select a valid data source before adding the criterion")
             
@@ -380,10 +416,12 @@ with controls_col:
                             st.write(f"**Weight:** {criterion.weight}")
                             st.write(f"**Preference:** {criterion.preference}")
                         
-                        # Option to remove criterion
+                        # Option to remove criterion with tab state preservation
                         if st.button("Remove", key=f"remove_{criterion.id}"):
+                            # Set active tab before removing
+                            st.session_state.active_tab = 2
                             st.session_state.project.remove_criterion(criterion.id)
-                            st.rerun()
+                            st.rerun()  # Using rerun for better state preservation
 
     # Tab 4: Run Analysis
     with tab4:
@@ -476,10 +514,13 @@ with controls_col:
                     ax.set_title('Criteria Weight Distribution')
                     st.pyplot(fig)
             
-            # Run analysis button
+            # Run analysis button with tab state preservation
             run_analysis = st.button("Run Suitability Analysis", key="run_analysis_btn")
 
             if run_analysis:
+                # Set active tab to Analysis tab (index 3)
+                st.session_state.active_tab = 3
+                
                 with st.spinner("Running analysis..."):
                     try:
                         # Create analyzer with selected options
@@ -510,7 +551,7 @@ with controls_col:
                         # Success message
                         st.success("Analysis complete! Results displayed on the map.")
                         
-                        # Force UI refresh - we'll use a simpler approach
+                        # Force UI refresh with rerun
                         st.rerun()
                         
                     except Exception as e:
@@ -645,6 +686,9 @@ with controls_col:
             # GeoJSON download button
             with col1:
                 if st.button("Prepare GeoJSON Download"):
+                    # Set active tab to Export tab (index 4)
+                    st.session_state.active_tab = 4
+                    
                     with st.spinner("Preparing GeoJSON..."):
                         # Only create exporter and process result when button is clicked
                         exporter = ResultsExporter()
@@ -670,6 +714,9 @@ with controls_col:
             # Shapefile download button
             with col2:
                 if st.button("Prepare Shapefile Download"):
+                    # Set active tab to Export tab (index 4)
+                    st.session_state.active_tab = 4
+                    
                     with st.spinner("Preparing Shapefile..."):
                         try:
                             # Only create exporter and process when button is clicked
@@ -697,6 +744,9 @@ with controls_col:
             # CSV download button
             with col3:
                 if st.button("Prepare CSV Download"):
+                    # Set active tab to Export tab (index 4)
+                    st.session_state.active_tab = 4
+                    
                     with st.spinner("Preparing CSV..."):
                         # Only create exporter and process when button is clicked
                         exporter = ResultsExporter()
@@ -722,6 +772,9 @@ with controls_col:
             preview_expander = st.expander("Preview Data")
             with preview_expander:
                 if st.button("Load Preview Data", key="load_preview"):
+                    # Set active tab to Export tab (index 4)
+                    st.session_state.active_tab = 4
+                    
                     st.write("Top 5 rows of the results:")
                     # Display top 5 rows without geometry column
                     result_gdf = st.session_state.project.result

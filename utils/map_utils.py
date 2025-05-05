@@ -350,6 +350,19 @@ def display_map_with_st_folium():
             
             # Store the bounds in session state for the home button
             st.session_state.boundary_bounds = boundary_bounds
+            
+            # Set a flag to ensure we keep the map centered on the boundary
+            # This is a key change to maintain zoom level
+            if 'last_zoom_key' not in st.session_state:
+                st.session_state.last_zoom_key = None
+                
+            # Reset zoom only when boundary changes or explicit refresh requested
+            if ('last_zoom_key' in st.session_state and 
+                st.session_state.last_zoom_key != str(id(st.session_state.project.boundary_dataset))):
+                should_fit_bounds = True
+                fit_bounds_to = gdf
+                st.session_state.last_zoom_key = str(id(st.session_state.project.boundary_dataset))
+            
         except Exception as e:
             pass
     
@@ -408,13 +421,12 @@ def display_map_with_st_folium():
             
             boundary_layer.add_to(m)
             
-            # Check if this is a new boundary or we need to force zoom
-            current_boundary_key = f"{id(st.session_state.project.boundary_dataset)}"
-            if (current_boundary_key != st.session_state.last_boundary_key or 
-                st.session_state.force_map_refresh):
-                should_fit_bounds = True
-                fit_bounds_to = gdf
-                st.session_state.last_boundary_key = current_boundary_key
+            # Check if we need to fit bounds based on the current session state
+            # Only fit bounds if explicitly requested
+            if should_fit_bounds or st.session_state.force_map_refresh or 'zoom_boundary_btn' in st.session_state:
+                m.fit_bounds(boundary_bounds)
+                # Update center in session state based on bounds
+                st.session_state.map_center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
                 
         except Exception as e:
             st.error(f"Error adding boundary layer: {str(e)}")
@@ -493,11 +505,6 @@ def display_map_with_st_folium():
                 # Add the feature group to the map
                 result_layer.add_to(m)
                 
-                # If new results, maybe fit bounds to them
-                if st.session_state.force_map_refresh and hasattr(st.session_state.project, 'result'):
-                    if not should_fit_bounds:  # Only if we're not already fitting to boundary
-                        should_fit_bounds = True
-                        fit_bounds_to = st.session_state.project.result
             else:
                 # Fallback for results without style function
                 folium.GeoJson(
@@ -522,19 +529,14 @@ def display_map_with_st_folium():
         hideSingleBase=True
     ).add_to(m)
     
-    # Apply bounds if needed and we're forcing a refresh
-    if should_fit_bounds and fit_bounds_to is not None and st.session_state.force_map_refresh:
-        try:
-            bounds = fit_bounds_to.total_bounds
-            m.fit_bounds([
-                [bounds[1], bounds[0]],  # SW corner
-                [bounds[3], bounds[2]]   # NE corner
-            ])
-            
-            # Update center in session state based on bounds
-            st.session_state.map_center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-        except Exception as e:
-            st.error(f"Error fitting bounds: {str(e)}")
+    # If 'boundary_bounds' exists in session state and zoom button is clicked,
+    # force zoom to boundary
+    if ('boundary_bounds' in st.session_state and 
+        'zoom_to_boundary_requested' in st.session_state and 
+        st.session_state.zoom_to_boundary_requested):
+        m.fit_bounds(st.session_state.boundary_bounds)
+        # Reset the flag for next time
+        st.session_state.zoom_to_boundary_requested = False
     
     # Reset force refresh flag
     force_refresh = st.session_state.force_map_refresh
@@ -565,6 +567,20 @@ def display_map_with_st_folium():
                 
         if map_data and 'zoom' in map_data and map_data['zoom'] is not None:
             st.session_state.map_zoom = map_data['zoom']
+    
+    # Don't store map interaction data if we're in the middle of a workflow
+    # This preserves the zoom level when processing methods change
+    if 'processing_method_selector' not in st.session_state.last_clicked:
+        # Process map data to update session state
+        if map_data:
+            if 'center' in map_data and map_data['center'] is not None:
+                if isinstance(map_data['center'], dict) and 'lat' in map_data['center'] and 'lng' in map_data['center']:
+                    st.session_state.map_center = [map_data['center']['lat'], map_data['center']['lng']]
+                else:
+                    st.session_state.map_center = map_data['center']
+                    
+            if 'zoom' in map_data and map_data['zoom'] is not None:
+                st.session_state.map_zoom = map_data['zoom']
     
     return force_refresh
 
