@@ -1,6 +1,8 @@
 # Suitable: Interactive Suitability Analysis Tool
 
-A geospatial web application for suitability analysis that guides users through the process with an intuitive interface, allowing them to input their own datasets, and eliminating the need for specialized geospatial knowledge.
+App URL: https://suitable.streamlit.app/
+
+A geospatial web application for suitability analysis that guides users through the analysis process with an intuitive interface, allowing them to input their own datasets, and eliminating the need for specialized geospatial knowledge.
 
 ## Overview
 
