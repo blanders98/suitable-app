@@ -43,6 +43,7 @@ Suitable is a streamlined geospatial analysis tool that helps users identify opt
 
 ## Project Structure
 
+```bash
 Suitable/
 ├── app.py                      # Main entry point with UI components
 ├── app_testing.ipynb           # Jupyter notebook for testing
@@ -66,6 +67,7 @@ Suitable/
     ├── file_utils.py           # File handling utilities
     ├── geo_processing.py       # Geospatial operations
     └── map_utils.py            # Map display and interaction
+```
 
 ## Usage Guide
 
