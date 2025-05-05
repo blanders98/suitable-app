@@ -1,5 +1,9 @@
 [theme]
-primaryColor = "#2e86c1"
-backgroundColor = "#f0f2f6"
-secondaryBackgroundColor = "#e6eaf1"
-textColor = "#262730"
+base = "dark"  # Can be "light" or "dark"
+primaryColor = "#4D77FF"  # Used for buttons, sliders, etc.
+backgroundColor = "#0B0F19"  # Main background
+secondaryBackgroundColor = "#1E2A45"  # Sidebar and most widgets
+textColor = "#F1F1F1"  # Text color
+linkColor = "#8CA8FF"  # Link color (new option)
+codeBackgroundColor = "#2E3440"  # Code block background (new option)
+font = "sans serif"  # Can be "sans serif", "serif", or "monospace"
