@@ -535,7 +535,7 @@ def display_map_with_st_folium():
         'zoom_to_boundary_requested' in st.session_state and 
         st.session_state.zoom_to_boundary_requested):
         m.fit_bounds(st.session_state.boundary_bounds)
-        # Reset the flag for next time
+        # Reset the flag after we've handled it
         st.session_state.zoom_to_boundary_requested = False
     
     # Reset force refresh flag
@@ -583,4 +583,3 @@ def display_map_with_st_folium():
                 st.session_state.map_zoom = map_data['zoom']
     
     return force_refresh
-

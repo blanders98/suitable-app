@@ -95,7 +95,7 @@ with map_col:
         if 'boundary_bounds' in st.session_state and zoom_boundary:
             st.session_state.force_map_refresh = True
             st.session_state.zoom_to_boundary_requested = True
-            st.rerun()  # Using rerun for better state preservation
+            st.rerun() # Using rerun for better state preservation
     
     # If the map was just refreshed, inform the user
     if force_refresh:
